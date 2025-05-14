@@ -1,0 +1,561 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+## Tyler Ward 
+
+# Instructions
+You're almost done with the semester! Take a second to congratulate yourself on getting here. As a reminder, this final project is simply an (imperfect) way of measuring what you have learned throughout the semester. So take a deep breath and do your best, but also remember that it doesn't determine your value as a human being.
+
+The exam is split into 4 sections: Module 1, 2 and 3 (6 questions), Modules 4 and 5 (3 questions), Module 6 (2 questions) and the final project. Most of the questions on this exam are short answers. You don't need to write out an overly long response (a sentence or so for each part of the question should be fine), but you should be specific in explaining your response. For example, if there is a question about whether the assumptions are reasonable. You shouldn't just say "from the plot we can see that the linearity assumption is (or is not) reasonable," but instead you should explain specifically why the plot leads you to believe the linearity assumption is (or is not) reasonable.
+
+The exam is open notes so you **can** use any of the material or any of the notes you have taken throughout the class. You **cannot** discuss the exam (while it is in progress) with anyone else. You also **cannot** use any generative AI tools. Submissions will be sent by e-mail to **nbb45@cornell.edu** before **May 14th 11:59pm**.    
+
+\newpage
+
+# Module 1, 2, and 3
+In the questions for Modules 1, 2, and 3, we will look at data from SNCF, France's national railway. The data has been cleaned and made easily available by [TidyTuesday](https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-02-26). In particular, we have data on train delays from each month between 2015-2018 for each train route (i.e., from city A to city B). So each observation (i.e., row in the data) corresponds to a specific route in a specific year and month. In the dataset, we will be particularly interested in the following variables
+
+For each row in the data, we have the following variables
+
+* year : year of observation (2015, 2016, 2017 or 2018)
+* month : month of observation (1, 2, ..., 12)
+* departure_station : station where the route begins (e.g., "PARIS NORD" or "MONTPELLIER")
+* arrival_station : station where the route ends (e.g., "PARIS NORD" or "MONTPELLIER")
+* journey_time_avg : average journey time in minutes for the route for that year and month
+* avg_delay_all_departing : average delay in minutes  for all departures for the route for that year and month (i.e., how many minutes the train was late to leave departure station)
+* avg_delay_all_arriving : average delay in minutes for all arrivals for the route for that year and month (i.e., how many minutes the train was late to arrive at the arrival_station)
+
+In the following questions, the model you fit or consider may change from question to question.
+
+
+```{r, fig.align='center', fig.height=3}
+## Load in data and remove some outliers
+train_data <- read.csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-26/small_trains.csv")
+# removing some outliers
+train_data <- train_data[-which(train_data$avg_delay_all_arriving < -30),]
+train_data <- train_data[-which(train_data$avg_delay_all_departing > 30),]
+# make month and year factors
+train_data$month <- as.factor(train_data$month)
+train_data$year <- as.factor(train_data$year)
+
+```
+
+
+
+## Question 1 (2 pts)
+Suppose we are interested in modeling the average delayed arrival; i.e., avg_delay_all_arriving is the outcome variable. Specifically, we would like to investigate the association between average delayed arrival and journey time (journey_time_avg) when controlling for the average departure delay (avg_delay_all_departing).
+
+Fit the relevant linear model below and write 1 sentence interpreting the estimated coefficient for journey_time_avg. 
+
+#### Question 1 Answer
+
+The code below shows the visualization of average delay all arriving given journey time average and average delay all departing. The Coefficient of journey time avg tell us that for every one unit increase in journey time average, the average delay all arriving increases by 0.2208 units, and this is after controlling average delay all departing. 
+
+```{r}
+##average daily arrival model
+library(ggplot2)
+
+av_daily_arr_model = lm(avg_delay_all_arriving ~ journey_time_avg + avg_delay_all_departing, data = train_data)
+av_daily_arr_model
+coef(av_daily_arr_model)
+
+ggplot(av_daily_arr_model, aes(x = avg_delay_all_arriving, y = journey_time_avg)) + geom_point(color = "red", size = 1, alpha = 0.3) +  theme(panel.grid.major = element_line(color = "black"))
+
+```
+
+
+## Question 2 (2 pts)
+Some output for a **different model** is shown below. Using the output, predict the average arrival delay for a train route which has an average journey time of 200 minutes, has an average departure delay of 3 minutes, and took place in January (i.e., month == 1). 
+```{r, echo =F}
+mod2 <- lm(avg_delay_all_arriving ~ journey_time_avg + avg_delay_all_departing + month, data = train_data)
+summary(mod2)$coef
+
+plot(mod2)
+
+avgtime_jan_month_subsetdata = train_data[train_data$journey_time_avg == 200 & train_data$month == 1]
+
+mod3 = lm(avg_delay_all_arriving ~ journey_time_avg + avg_delay_all_departing + month, data = train_data)
+mod3
+
+plot(mod3)$coef
+
+```
+#### Question 2 Answer
+
+The average arrival delay for a train route which has an average journey time of 200 minutes, has an average departure delay of 3 minutes, and took place in January = -0.89154 minutes if the journey time were 0, and for every one minute increase in journey time, the arrival delay would increase by 0.02216 seconds. If we multiple the 200 minute journey time by 0.02216 we get = and increase of 4.8 minutes of a delay time for the month of January. 
+
+```{r}
+220*0.02216
+```
+
+## Question 3 (6 pts)
+Do the assumptions for linear regression seem reasonable for the model fit in Question 2? Explain why or why not? You should use the plots below to justify your answer.
+```{r, fig.align='center', fig.height=3, echo = F}
+par(mfrow = c(1,2))
+plot(mod2$fitted.values, mod2$residuals, pch = 19, cex = .1,
+     xlab = "fitted values", ylab = "residuals")
+plot(mod2$fitted.values, train_data$avg_delay_all_arriving,
+     pch = 19, cex = .1 , xlab = "fitted values", ylab = "observed values")
+abline(a = 0, b = 1, col = "red")
+```
+
+
+#### Question 3 Answer
+
+The plots of residuals and observed values above show the following assumptions for linear regression models: linearity - you can see from the observed vs fitted values graph that their is a linear relationship, although it is not perfect, I would acknowledge that there is a positive slope and trend. Homoscedasticity - the plotted points are relatively uniform and grouped across the increasing values, they do not fan out like they would if the plot was heteroskedastic. Independence - residuals have no pattern, they are just "clumped" around 0 indicating that there is no pattern with the residual data. Normality is not a concern or heavy weighted assumption with larger datasets, but for the most part there is normality among the plotted points in the q-q plot I ran in question 2. There is some deviance of the line but the majority of the points are on the line. 
+
+
+## Question 4 (2 pts)
+Suppose you think the association between arrival delay and journey time (i.e., the slope of journey time) may change from year to year. Fit a linear model below which would allow for that. For this problem, you **do not** need to consider adjusting for other variables in the model.
+
+```{r}
+
+train_data$year
+
+mod4 = lm(avg_delay_all_arriving ~ journey_time_avg * year, data = train_data)
+mod4
+
+plot(mod4, which = 1,
+main = "Arrival delay vs journey time average", 
+col = "red", pch = 14)
+
+ggplot(train_data, aes(x= journey_time_avg, y = avg_delay_all_arriving, color = factor(year))) + geom_point(alpha =0.3) + geom_smooth(method = "lm", se = FALSE)+ labs(color = "Year") + theme_minimal()
+
+```
+
+### Question 4 Answer
+
+I created two different plots for this question. I do not like using plot as much as I do like using ggplot. With ggplot I feel like I can do more with the scatterplots and lay lines over top to be able to see linear relationships. The utility of the ggplot is to visualize the difference between each year for the association of journey time and arrival delay. This ggplot does show us that there is a difference in the association between arrival delay and journey time for each year, with the year 2018 having the most variable looking data, you can see some outliers for that year compared to other years. The plot() does show us the fitted vs. residual values, that is useful for determining if we have a model that fits well (if the scatter plot is around 0, it indicates that the model has a good fit.)
+
+## Question 5 (3 pts)
+Below, we fit a model which includes the covariates journey time, average departing delay and month. Suppose we want to test if the average arrival delay is associated with month after adjusting for journey time and average departure delay. For this problem, you don't need to consider interaction terms and you don't need to include other covariates. Describe how you would test this hypothesis. You don’t need to actually perform any calculations or write any code, but specify which function in R you would use and be specific about what the inputs would be.
+ 
+```{r}
+mod_year <- lm(avg_delay_all_arriving ~ journey_time_avg + avg_delay_all_departing + month,
+               data = train_data)
+summary(mod_year)
+
+ggplot(train_data, aes(x = journey_time_avg, y = avg_delay_all_arriving, color = factor(month))) + geom_point(alpha = 0.6) + geom_smooth(method = "lm", se = FALSE) + labs(color = "month", title = "Arrival delay vs journey time by months", x = "journey time", y = "arrival delay")  + theme_minimal()
+```
+#### Question 5 answer
+I used ggplot to make the map. You said we didn't have to do the actual code, but I needed to visualize. I like using ggplot like I mentioned previously because I like to be able to color code each data point as a third variable. To perform hypothesis testing for this linear model the summary() gives us the estimate, std error, t-value, and p-value. The t-value tells us if a predictor has an effect or not within the model. You can see from our output, that the months 6,7,11 have the greatest effect for this model, and that is supported by their corresponding p-values. 
+
+## Question 6 (2 pt)
+Suppose we fit the model below where we have used the log of journey_time_avg. Write 1 sentence interpreting the coefficient for journey time.  
+
+```{r}
+mod_log <- lm(avg_delay_all_arriving ~ log(journey_time_avg),
+              data = train_data)
+summary(mod_log)
+```
+#### Question 6 answer
+
+With a unit increase of one for the journey_time_avg, we will see on average an increase of 0.03 minutes for the avg_delay_all_arriving, meaning the arrival delay time will increase by 0.03 minutes for every increase in journey time unit. 
+
+# Module 4 and 5
+
+
+## Question 7 (3 pts)
+In the model you fit in Question 1, each observation in the dataset corresponds to a specific route observed in a specific month and year. Thus each route appears in the data multiple times. Explain why this might violate an assumption for linear regression. How could you fix this? If your suggestion involves additional covariates or a different modeling assumption, be specific about what you mean (i.e., say what covariates would you include, or what model you would fit). There is more than 1 reasonable answer for this question, but just pick one.
+
+#### Question 7 answer
+
+Because we have repeating data for the same route - a linear regression model isn't the best fit because this model type works with non-repeating data. We violate the independence assumption because the data points are NOT independent if they are repeated sampling of the same route - observations from the same source (route), will have correlated errors. A model choice that would fit better is a linear mixed effects model - this is because this model allows for repeating data in this case, multiple observations of the same route. Linear mixed effects model works well with repeat sampling data, clustered observations, and hierarchical data. 
+
+## Question 8 (3 pts)
+Using the model from Question 5, we plot the fitted values vs the residuals below. Explain why you might want to use robust standard errors. What might be the advantages and disadvantages of using the robust standard errors as opposed to the model based errors (the ones that come out of \texttt{summary})?
+
+```{r, echo = F}
+mod_log <- lm(avg_delay_all_arriving ~ log(journey_time_avg),
+              data = train_data)
+plot(mod_log$fitted.values, mod_log$residuals, pch = 19, cex = .1)
+```
+
+#### Question 8 answer
+
+Model-based errors are using the assumptions of the model that you created - so it will be assume homoscedastic data if you are using a linear model. The robust standard errors is using the residuals from the model you create to then calculate the variability of that specific data. Robust standard errors is more specific to the actual data you are working with compared to model-based errors is making MORE assumptions based on the assumptions that they assume based on linear models, etc. 
+
+## Question 9 (3 pts)
+Suppose you are taking a train tomorrow from Lille to Paris Nord and want to predict the delay in arrival. You want to be very sure about the prediction, so you gather data for 1000 different variables you think might be relevant (temperature, whether it is raining, GDP of France per month/year, the win/loss record of the soccer team in Lille, etc). You then regress average arrival delay onto all of those variables, and use it to predict the arrival delay for tomorrow's train. Explain why this might not give a good prediction. What might you do instead? 2-3 sentences for this answer is fine.
+
+#### Question 9 answer
+
+Some of the variables will most likely be related and not independent, so having multiple variables that are related can create a model that is overfitted - this is when data are multicollinear. Also having 1000 variables is a lot and can create a lot of extra noise for the model and might give you a less realistic prediction of your delay in arrival. You are unable to determine for sure which variables are actually creating the most impact to your model. 
+
+# Module 6
+For the following questions, suppose we are analyzing data for Big Red Airlines, Cornell's latest idea for getting people to and from Ithaca. The dependent variable is whether or not a flight took off on time. In the \texttt{OnTime} variable: 1 indicates that the flight took off on time, 0 indicates that it was delayed. The covariates we have recorded include Temperature (in degrees), TimeOfDay (Evening, Midday, Morning), and Rain (FALSE, TRUE). 
+```{r}
+airlineData <- read.csv("https://raw.githubusercontent.com/ysamwang/btry6020_sp22/main/lab11/airline.csv")
+names(airlineData)
+```
+
+## Question 10 (2 pts)
+What is the appropriate type of regression for modeling the binary data? What is being predicted by the linear model we are fitting? i.e., if the model we set up is 
+$$ ? = b_0 + b_1 X_{1,i} + b_2 X_{2,i} \ldots$$ what is on the left side of the equation (you can write it out in words instead of typing out the math)?. 
+
+#### Question 10 answer
+
+Appropriate type of regression for binary data is logistic regression. Logistic regression is the best for categorical data that has a binary outcome. On the left side of the equation above, would be our outcome of did the flight took off on time (yes (1)/no (0)). 
+
+## Question 11 (2 pts)
+We fit the model below. How would you interpret the coefficient associated with \texttt{Temperature}?
+```{r}
+mod <- glm(OnTime ~ Temperature + TimeOfDay + Rain,
+           data = airlineData, family = "binomial")
+summary(mod)
+```
+#### Question 11 answer
+
+This result shows that the logistic regression output for temperature is that when temperature increases by 1 unit, the odds of the plane leaving on time goes down by 0.05%.
+
+\newpage
+
+# Final Project (30 pts)
+
+## Introduction
+
+This final project is designed to demonstrate your mastery of linear regression techniques on real-world data. You will apply the theoretical concepts we've covered in class to a dataset of your choice, perform a comprehensive analysis, and present your findings in a professional format suitable for showcasing to potential employers.
+
+## Objectives
+
+By completing this project, you will:
+
+* Apply linear regression techniques to solve real-world problems
+* Demonstrate your ability to verify and address regression assumptions
+* Perform meaningful feature selection and hypothesis testing
+* Communicate the practical significance of your statistical findings
+* Create a professional portfolio piece for future employment opportunities
+
+## Project Requirements
+
+### Dataset Selection
+
+1. Choose a dataset from Kaggle
+2. Your dataset must have a continuous target variable suitable for linear regression
+3. The dataset should contain multiple potential predictor variables
+4. Choose a dataset that interests you and has meaningful real-world applications
+
+## The following is penguin data. This has different species of penguins, the size based on species, the island they originate, sex, etc. 
+
+```{r}
+penguins_size = read.csv("C:/Users/tjw237/OneDrive - Cornell University/Documents/STATS 2- BTRY 6020/Final project/penguins_size.csv")
+```
+
+
+## Identifying penguins based on different predictor variables: (Culmen is the upper ridge of the bill of a penguin.) Species, Island, Culmen length in mm, culmen depth in mm, flipper length in mm, body mass in grams, and sex. Penguins are a species of interest because many penguins live in areas that are greatly impacted by climate change and use of natural resources. Identifying how to classify penguins based on species, and identifying species characteristics is important to be able to monitor species specific changes. 
+
+
+### Analysis Requirements
+Your analysis must include the following components:
+
+#### Exploratory Data Analysis
+
+* Summary statistics of variables
+* Visualization of distributions and relationships
+* Identification of missing values and outliers
+* Data cleaning and preprocessing steps
+
+
+#### Regression Assumptions Verification
+
+* Linearity assessment
+* Normality of residuals
+* Homoscedasticity (constant variance of residuals)
+* Independence of observations
+* Multicollinearity assessment
+
+
+#### Assumption Violation Handling
+
+* Apply appropriate transformations when assumptions are violated
+* Document your approach to each violation
+* Compare models before and after corrections
+
+
+#### Variable Selection & Hypothesis Testing
+
+* Implement at least two different variable selection techniques
+* Perform hypothesis tests on coefficients
+* Assess model performance with metrics (R², adjusted R², RMSE, etc.)
+* Validate your model using appropriate cross-validation techniques
+
+
+#### Feature Impact Analysis
+
+* Quantify and interpret the impact of each feature on the target
+* Provide confidence intervals for significant coefficients
+* Explain the practical significance of your findings in the context of the dataset
+
+
+```{r}
+table(penguins_size$species, penguins_size$body_mass_g, penguins_size$island)
+
+##Sorting penguins by island
+
+Biscoe_peng = subset(penguins_size, island == "Biscoe")
+Biscoe_peng
+
+Torg_peng = subset(penguins_size, island == "Torgersen")
+Torg_peng
+
+Dream_peng = subset(penguins_size, island =="Dream")
+Dream_peng 
+
+##Sorting penguins by species
+
+Adelie_spec = subset(penguins_size, species == "Adelie")
+Adelie_spec
+
+Gentoo_spec = subset(penguins_size, species =="Gentoo")
+Gentoo_spec
+
+Chinstrap_spec = subset(penguins_size, species == "Chinstrap")
+Chinstrap_spec
+
+penguin_size_spec = lm(body_mass_g ~ species, data = penguins_size)
+summary(penguin_size_spec)
+```
+
+
+```{r}
+## boxplot of the species of penguin and the body mass 
+ggplot(penguins_size, aes(x = species, y = body_mass_g, fill = species)) +
+  geom_boxplot(alpha = 0.6) +
+  labs(title = "body mass by penguin species", 
+       y= "Body Mass (g)") +
+  theme_minimal()
+
+## you can see that for the Chinstrap species there are two outliers in that group. 
+
+#Boxplot of the body mass by island
+penguin_island_plot = ggplot(penguins_size, aes(x = island, y = body_mass_g, fill = island)) +
+  geom_boxplot(alpha = 0.6) +
+  labs(title = "body mass by island", 
+       y= "Body Mass (g)") +
+  theme_minimal()
+penguin_island_plot
+
+
+#Penguin flipper length by body mass and species
+ggplot(penguins_size, aes(x = body_mass_g, y = flipper_length_mm, fill = species)) +
+  geom_boxplot(alpha = 0.6) +
+  labs(title = "flipper length based on body mass and species", 
+       y= "Flipper length") +
+  theme_minimal()
+
+#Length of penguin by species and sex
+ggplot(penguins_size, aes(x = culmen_length_mm, y = species, fill = sex)) +
+  geom_boxplot(alpha = 0.6) +
+  labs(title = "Penguin length based on species and sex", 
+       y= "species") +
+  theme_minimal()
+
+#length of penguin by island
+ggplot(penguins_size, aes(x = culmen_length_mm, y = island, fill = island)) +
+  geom_boxplot(alpha = 0.6) +
+  labs(title = "length of penguin by island", 
+       y= "island") +
+  theme_minimal()
+
+
+##For some of the plots there is a warning error that comes with the plots - that is because some of the data is either outside of range, or does not fit the scale - this can be due to typos, outliers, missing data, etc. 
+
+## needing all the data to be numeric - I have to recode the predictors that are categorical into numerical based predictors. 
+
+library("dplyr")
+
+levels(penguins_size$species)
+levels(penguins_size$island)
+levels(penguins_size$sex)
+
+pengsize_species = recode(penguins_size$species,
+"Adelie" = 1, "Chinstrap" = 2, "Gentoo'" = 3)
+
+pengsize_island = recode(penguins_size$island, 
+                         "Biscoe" = 1, 
+                         "Dream" = 2,
+                         "Torgersen" = 3)
+
+pengsize_sex = recode(penguins_size$sex, 
+                      "FEMALE" = 1, 
+                      "MALE" = 2)
+```
+
+
+```{r}
+##model of penguin species based on the other variables: island, culmen length, culmen depth, flipper length, body mass, and sex
+
+lin_mod_penguin = lm(pengsize_species ~ pengsize_island + penguins_size$culmen_length_mm + penguins_size$culmen_depth_mm + penguins_size$flipper_length_mm + penguins_size$body_mass_g + pengsize_sex)
+lin_mod_penguin
+plot(lin_mod_penguin)
+
+##model of penguin sex based on the other variables:island, culmen length, culmen depth, flipper length, body mass, and species
+
+lin_mod_pengsex = lm(pengsize_sex ~ pengsize_species + pengsize_island + penguins_size$culmen_length_mm + penguins_size$culmen_depth_mm + penguins_size$flipper_length_mm + penguins_size$body_mass_g)
+
+lin_mod_pengsex
+plot(lin_mod_pengsex)
+
+
+##model of penguin species based on flipper length
+
+linmodspecies = lm(pengsize_species ~ penguins_size$flipper_length_mm)
+linmodspecies
+plot(linmodspecies)
+
+##model of penguin body mass by penguin species --> this is the most uniform of the models because it is categorizing body mass based on species, and so there isn't a lot of overlap between species, like in some of the other models that are accounting for sex within species, etc. 
+
+linmodbodymass = lm(penguins_size$body_mass_g ~ pengsize_species)
+linmodbodymass
+plot(linmodbodymass)
+```
+
+
+```{r}
+##Checking Assumptions## 
+##------------------------------------------------------------------------
+
+#model of penguin flipper length based on culmen length, culmen depth, body mass, and species
+
+lin_mod_pengflip = lm(penguins_size$flipper_length_mm ~ penguins_size$culmen_length_mm + penguins_size$culmen_depth_mm + penguins_size$body_mass_g + penguins_size$species)
+lin_mod_pengflip
+plot(lin_mod_pengflip)
+## which=1 is used to visualize if the data is homoscedastic (around 0, or if it is increasing in variance the further down the x axis, which would imply heteroscedastic data. 
+
+plot(lin_mod_pengflip, which = 1)
+
+
+##I tried to perform a homoscedastic check on this plot, but it did not give the results I was looking for. It plotted the values in a vertical line and not horizontal, and there was no variance in the line see below: 
+
+plot(linmodbodymass, which = 1) ##So, I am going to try and see if I flip the lm model if it will change the way it looks. 
+
+linmodbodymass2 = lm(pengsize_species ~ penguins_size$body_mass_g)
+linmodbodymass2
+
+plot(linmodbodymass2, which = 1) ##I think this is because of the variable for species is binary, even after turning it into a numerical value (1,2). So I am going to test if I use two variables that have numerical continuous data if that will give me a much better result:
+
+linmod_flip_body = lm(penguins_size$flipper_length_mm ~ penguins_size$body_mass_g)
+linmod_flip_body
+plot(linmod_flip_body, which = 1)
+
+##this plot to check for homoscedastic data is much better! The distribution of the data is more homoscedastic and what you want to see compared to the first one I used. 
+```
+
+
+```{r}
+##hypothesis testing on coefficients: The t-value is showing how far away from O or the null that the variable is. So for the flipper size variable - the standard error estimate is 68.47, or 68.47 standard errors away from the null, and so it does predict that the relationship between flipper length (outcome) is significant with the body mass variable (predictor). 
+
+coef(linmod_flip_body)
+summary(linmod_flip_body)
+```
+
+
+```{r}
+
+##normality assumption - this is achieved with a qqnorm visual of all the residual data for the linmodbodymass model from the model above. 
+qqnorm(residuals(linmodbodymass))
+
+qqline(residuals(linmodbodymass), col = "blue")
+
+
+```
+
+
+
+```{r}
+## model for ALL variables using species as the outcome variable
+fullmodel = lm(body_mass_g ~ pengsize_island + culmen_length_mm + culmen_depth_mm + flipper_length_mm + pengsize_species  + pengsize_sex, data = penguins_size)
+summary(fullmodel)
+
+plot(fullmodel)
+```
+
+
+
+##identifying the full model 
+
+```{r}
+
+##first have to ensure that the sex, species, and island (all of which are categorical and/or binary) are in numerical value. 
+penguins_size$sex = as.factor(penguins_size$sex)
+penguins_size$species = as.factor(penguins_size$species)
+penguins_size$island = as.factor(penguins_size$island)
+
+summary(penguins_size)
+
+plot(penguins_size)
+```
+
+```{r}
+##identifying what categories (variables) have missing data that entered as NA. This allows us to start identifying areas that can be cleaned up prior to data analysis. 
+colSums(is.na(penguins_size))
+
+##We then can run a na.omitter to be able to get rid of those data that are missing
+
+clean_penguin_data = na.omit(penguins_size)
+clean_penguin_data
+```
+
+
+#### Deliverables
+
+GitHub Repository containing:
+
+* All code (well-documented Rmd files)
+* README.md with clear instructions on how to run your analysis
+* Data folder (or instructions for accessing the data)
+* Requirements.txt or environment.yml file
+
+
+#### Final Report (PDF) containing:
+
+* Introduction: dataset description and problem statement
+* Methodology: techniques used and justification
+* Results: findings from your analysis
+* Discussion: interpretation of results and limitations
+* Conclusion: summary and potential future work
+* References: cite all sources used
+
+
+## Evaluation Criteria
+Your project will be evaluated based on:
+
+* Correctness of statistical analysis and procedures
+* Proper handling of regression assumptions
+* Quality of variable selection and hypothesis testing
+* Clarity of interpretation and insights
+* Organization and documentation of code
+* Professional presentation of findings
+
+## Timeline and Submission
+
+* Release Date: May 5th, 2025
+* Due Date: Wednesday, May 14th, 2025 (11:59 PM EST)
+* Submission: Email your GitHub repository link and PDF report to nbb45@cornell.edu with the subject line "Final Project - [Your Name]"
+
+## Resources
+
+* Course materials and lecture notes
+* [Kaggle Datasets](https://www.kaggle.com/datasets)
+* [GitHub tutorial](https://nayelbettache.github.io/documents/STSCI_6020/Github_tutorial.pdf) and [GitHub documentation](https://docs.github.com/en/repositories) for repository setup.
+
+## Academic Integrity
+This is an individual project. While you may discuss general concepts with classmates, all submitted work must be your own. Proper citation is required for any external resources used.
+Good luck with your project! This is an opportunity to demonstrate your skills and create a valuable addition to your professional portfolio.
+
+
+References:
+Parul Pandey, https://www.kaggle.com/code/parulpandey/penguin-dataset-the-new-iris/notebook
+
+Data from Kaggle originated from the following Reference:
+Gorman KB, Williams TD, Fraser WR (2014). Ecological sexual dimorphism and environmental variability within a community of Antarctic penguins (genus Pygoscelis). PLoS ONE 9(3):e90081. https://doi.org/10.1371/journal.pone.0090081
+
+
+
+# Finished
+
+
+You're done, congratulations!
+
